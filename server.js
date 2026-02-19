@@ -1,44 +1,65 @@
-const http = require('http'); // Load the server tool
-const fs = require('fs');     // Load the file tool
+const http = require('http');
+const fs = require('fs');
+const url = require('url');
+
+const PORT = 4000;
+const FILE_PATH = 'notes.txt';
 
 const server = http.createServer((req, res) => {
-    
-    // --- STEP 1: LOGGING THE VISIT ---
-    // Create a simple timestamp
-    const timestamp = new Date().toLocaleString(); 
-    
-    // This is the specific format you wanted:
-    const logEntry = `${timestamp} - ${req.method} ${req.url}\n`;
+    const parsedUrl = url.parse(req.url, true);
+    const pathname = parsedUrl.pathname;
 
-    // Save this line into our logs.txt file
-    fs.appendFile('logs.txt', logEntry, (err) => {
-        if (err) {
-            console.log("Error: Could not write to the file!");
+    // 1. Route: GET /add?note=YourNoteHere
+    if (pathname === '/add' && req.method === 'GET') {
+        const note = parsedUrl.query.note;
+
+        if (!note) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            return res.end('400 Bad Request: Missing note parameter');
         }
-    });
 
-    // --- STEP 2: SHOWING THE PAGES ---
-    if (req.url === '/') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<h1>Home Page</h1><p>Welcome!</p>');
+        // Append note to file with a new line
+        fs.appendFile(FILE_PATH, note + '\n', (err) => {
+            if (err) {
+                res.writeHead(500);
+                return res.end('Error writing to file');
+            }
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('Note Added Successfully');
+        });
+    }
 
-    } else if (req.url === '/about') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<h1>About</h1><p>I am learning Node.js!</p>');
+    // 2. Route: GET /notes
+    else if (pathname === '/notes' && req.method === 'GET') {
+        // Check if file exists first
+        if (!fs.existsSync(FILE_PATH)) {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            return res.end('No Notes Found');
+        }
 
-    } else if (req.url === '/contact') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<h1>Contact</h1><p>Call me maybe?</p>');
+        fs.readFile(FILE_PATH, 'utf8', (err, data) => {
+            if (err) {
+                res.writeHead(500);
+                return res.end('Error reading file');
+            }
 
-    } else {
-        // This runs if the user types a URL that doesn't exist
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        res.end('<h1>404</h1><p>Page not found!</p>');
+            if (data.trim().length === 0) {
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('No Notes Found');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end(data);
+            }
+        });
+    }
+
+    // Default 404 for other routes
+    else {
+        res.writeHead(404);
+        res.end('Route Not Found');
     }
 });
 
-// --- STEP 3: START THE SERVER ---
-const PORT = 6000;
 server.listen(PORT, () => {
-    console.log(`Server is running! Check it out at http://localhost:${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}/`);
 });

@@ -1,0 +1,12 @@
+{
+  "name": "manage-notes",
+  "version": "1.0.0",
+  "description": "A simple Node.js server to manage notes using a file",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}
